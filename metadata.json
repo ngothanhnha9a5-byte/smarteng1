@@ -1,0 +1,7 @@
+{
+  "name": "Remix: Remix: Remix: Remix: SmartEng",
+  "description": "Ứng dụng học tiếng Anh toàn diện cho học sinh THPT, tích hợp AI chấm điểm phát âm và đấu trường thi đấu trực tuyến.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

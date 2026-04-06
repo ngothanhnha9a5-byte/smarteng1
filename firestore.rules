@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    function isAdmin() {
+      return isAuthenticated() &&
+        ((exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+          (request.auth.token.email == "ngothanhnha9a5@gmail.com" && request.auth.token.email_verified == true));
+    }
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'displayName', 'email', 'coins', 'streak', 'lastActive', 'stats', 'rank', 'inventory', 'totalScore']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.coins is int && data.coins >= 0 &&
+             data.streak is int && data.streak >= 0 &&
+             data.lastActive is string &&
+             data.stats is map &&
+             data.stats.quizScore is int &&
+             data.stats.grammarScore is int &&
+             data.stats.speakingScore is int &&
+             data.stats.writingScore is int &&
+             data.stats.readingScore is int &&
+             data.stats.listeningScore is int &&
+             data.stats.battleWins is int &&
+             data.rank in ['Bronze', 'Silver', 'Gold', 'Diamond'] &&
+             data.inventory is list &&
+             data.totalScore is int;
+    }
+
+    function isValidProfile(data) {
+      return hasRequiredFields(['uid', 'displayName', 'stats', 'totalScore', 'rank']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() > 0 && data.displayName.size() < 100 &&
+             data.stats is map &&
+             data.stats.quizScore is int &&
+             data.stats.grammarScore is int &&
+             data.stats.speakingScore is int &&
+             data.stats.writingScore is int &&
+             data.stats.readingScore is int &&
+             data.stats.listeningScore is int &&
+             data.stats.battleWins is int &&
+             data.totalScore is int &&
+             data.rank in ['Bronze', 'Silver', 'Gold', 'Diamond'];
+    }
+
+    function isValidQuestion(data) {
+      return hasRequiredFields(['module', 'difficulty', 'category', 'question', 'options', 'correctAnswer', 'explanation']) &&
+             data.module in ['quiz', 'grammar', 'speaking', 'battle', 'vocabulary'] &&
+             data.difficulty in ['easy', 'medium', 'hard'] &&
+             data.category is string && data.category.size() < 100 &&
+             data.question is string && data.question.size() < 1000 &&
+             data.options is list && data.options.size() == 4 &&
+             data.correctAnswer is string && data.correctAnswer.size() < 500 &&
+             data.explanation is string && data.explanation.size() < 2000 &&
+             (!('createdAt' in data) || data.createdAt is string);
+    }
+
+    function isValidBattle(data) {
+      return hasRequiredFields(['players', 'status', 'scores', 'questions']) &&
+             data.players is list && data.players.size() <= 2 &&
+             data.status in ['waiting', 'active', 'finished'] &&
+             data.scores is map &&
+             data.questions is list &&
+             (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // User profiles (Private - contains email)
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && areImmutableFieldsUnchanged(['uid', 'email'])) || isAdmin();
+    }
+
+    // Public profiles (Leaderboard - no PII)
+    match /profiles/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidProfile(request.resource.data);
+      allow update: if (isOwner(userId) && isValidProfile(request.resource.data) && areImmutableFieldsUnchanged(['uid'])) || isAdmin();
+    }
+
+    // Curriculum (Read-only for users, Admin can write)
+    match /curriculum/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Questions (Read-only for users, Admin can write)
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidQuestion(request.resource.data);
+      allow update: if isAdmin() && isValidQuestion(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Battles
+    match /battles/{battleId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidBattle(request.resource.data);
+      allow update: if isAuthenticated() && isValidBattle(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

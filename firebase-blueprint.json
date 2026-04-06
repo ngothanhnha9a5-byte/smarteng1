@@ -1,0 +1,142 @@
+{
+  "entities": {
+    "users": {
+      "title": "User Profile",
+      "description": "Thông tin người dùng, điểm số, streak và vật phẩm.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "coins": { "type": "integer", "description": "Tiền ảo để mở khóa bài học" },
+        "streak": { "type": "integer", "description": "Chuỗi ngày học liên tục" },
+        "lastActive": { "type": "string", "format": "date-time" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "quizScore": { "type": "integer" },
+            "grammarScore": { "type": "integer" },
+            "speakingScore": { "type": "integer" },
+            "writingScore": { "type": "integer" },
+            "readingScore": { "type": "integer" },
+            "listeningScore": { "type": "integer" },
+            "battleWins": { "type": "integer" }
+          }
+        },
+        "totalScore": { "type": "integer" },
+        "rank": { "type": "string", "enum": ["Bronze", "Silver", "Gold", "Diamond"] },
+        "inventory": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "profiles": {
+      "title": "Public Profile",
+      "description": "Thông tin công khai của người dùng (không chứa email).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "quizScore": { "type": "integer" },
+            "grammarScore": { "type": "integer" },
+            "speakingScore": { "type": "integer" },
+            "writingScore": { "type": "integer" },
+            "readingScore": { "type": "integer" },
+            "listeningScore": { "type": "integer" },
+            "battleWins": { "type": "integer" }
+          }
+        },
+        "totalScore": { "type": "integer" },
+        "rank": { "type": "string", "enum": ["Bronze", "Silver", "Gold", "Diamond"] }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "curriculum": {
+      "title": "English Curriculum",
+      "description": "Dữ liệu kiến thức từ vựng và ngữ pháp theo từng lớp và Unit.",
+      "type": "object",
+      "properties": {
+        "grade": { "type": "integer" },
+        "unit": { "type": "integer" },
+        "title": { "type": "string" },
+        "vocabulary": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "word": { "type": "string" },
+              "meaning": { "type": "string" },
+              "example": { "type": "string" }
+            }
+          }
+        },
+        "grammar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "title": { "type": "string" },
+              "explanation": { "type": "string" },
+              "formula": { "type": "string" },
+              "examples": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["grade", "unit", "title"]
+    },
+    "questions": {
+      "title": "Question Bank",
+      "description": "Ngân hàng câu hỏi cho các module.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "module": { "type": "string", "enum": ["quiz", "grammar", "speaking", "battle"] },
+        "difficulty": { "type": "string", "enum": ["easy", "medium", "hard"] },
+        "category": { "type": "string", "description": "Tenses, Conditionals, etc." },
+        "question": { "type": "string" },
+        "options": { "type": "array", "items": { "type": "string" } },
+        "correctAnswer": { "type": "string" },
+        "explanation": { "type": "string" }
+      }
+    },
+    "battles": {
+      "title": "Battle Arena Session",
+      "description": "Phiên thi đấu 1vs1.",
+      "type": "object",
+      "properties": {
+        "players": { "type": "array", "items": { "type": "string" } },
+        "scores": { "type": "object" },
+        "status": { "type": "string", "enum": ["waiting", "active", "finished"] },
+        "startTime": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "Thông tin cá nhân người dùng (riêng tư)."
+    },
+    "/profiles/{userId}": {
+      "schema": "profiles",
+      "description": "Thông tin công khai của người dùng (leaderboard)."
+    },
+    "/curriculum/{curriculumId}": {
+      "schema": "curriculum",
+      "description": "Dữ liệu kiến thức học tập."
+    },
+    "/questions/{questionId}": {
+      "schema": "questions",
+      "description": "Ngân hàng câu hỏi chung."
+    },
+    "/battles/{battleId}": {
+      "schema": "battles",
+      "description": "Các trận đấu đang diễn ra."
+    }
+  }
+}
